@@ -27,7 +27,7 @@ brew install pandoc
 
 # Clone and run sch against the example codex
 git clone https://github.com/adammillerio/sch.git
-sch --app example_codex run
+sch run
 ```
 
 And go to http://localhost:5000/sch?s=sch_help for usage info.
@@ -84,12 +84,12 @@ sch --app hello_world search hello
 https://github.com/adammillerio/sch
 ```
 
-An example codex with some basic commands is provided at [example_codex.py](example_codex.py).
+An example codex with some basic commands is provided at [app.py](app.py). Flask
+will load `./app.py` by default if `--app` is not provided.
 
 To start the sch webserver, run the example codex from the root of this repository:
 ```bash
-sch --app example_codex run
- * Serving Flask app 'hello_world'
+sch run
  * Debug mode: off
 INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
  * Running on http://127.0.0.1:5000
@@ -97,6 +97,11 @@ INFO:werkzeug:Press CTRL+C to quit
 ```
 
 And go to http://localhost:5000/sch?s=sch_help for usage info.
+
+This leverages Flask [Application Factories](https://flask.palletsprojects.com/en/2.3.x/patterns/appfactories/),
+which are used to generate the final Flask implementation at the end of the root
+codex. Above this, the Codex can be composed via importing commands or defining
+them directly as neecessary.
 
 # Usage
 `sch` is best explained via hands on examples. This will demonstrate adding a 
@@ -121,9 +126,9 @@ Flask test request context to execute the same HTTP request flow and display the
 generated redirect URL:
 
 ```bash
-sch --app example_codex search gh
+sch search gh
 https://github.com
-sch --app example_codex search gh search adammillerio/sch test search
+sch search gh search adammillerio/sch test search
 https://github.com/search?type=code&q=repo:adammillerio%2Fsch+test+search
 ```
 
@@ -143,25 +148,14 @@ def github(*args: str) -> str:
 
     return "https://github.com"
 
-
-# Flask Application Factory
-# Run with sch --app hello_world run
-def create_app():
-    return codex.create_app()
-
 ```
-
-This leverages Flask [Application Factories](https://flask.palletsprojects.com/en/2.3.x/patterns/appfactories/),
-which are used to generate the final Flask implementation at the end of the root
-codex. Above this, the Codex can be composed via importing commands or defining
-them directly as neecessary.
 
 All commands have the same signature, any amount of strings as arguments, which 
 generates another string. All actual HTTP redirection is handled by Flask. In this 
 case, this is just a bookmark that makes `gh` go to the home page of GitHub:
 
 ```bash
-sch --app example_codex search gh
+sch search gh
 https://github.com
 ```
 
@@ -193,7 +187,7 @@ def github(repo: str, *args: str) -> str:
 Now supplying a repo goes to the repo page as expected:
 
 ```bash
-sch --app example_codex search gh adammillerio/sch
+sch search gh adammillerio/sch
 https://github.com/adammillerio/sch
 ```
 
@@ -226,7 +220,7 @@ def github_search_all(*args: str) -> str:
 
 This registers specific handlers for `gh search` and `gh search all`, which are reflected in the tree:
 ```bash
-sch --app example_codex search gh sch_tree
+sch search gh sch_tree
 gh - go to github or a view a repo
 +-- search - search a github repo
    +-- all - search all of github
@@ -234,10 +228,10 @@ gh - go to github or a view a repo
 
 And also implements the last two search commands:
 ```bash
-sch --app example_codex search gh search adammillerio/sch search query
+sch search gh search adammillerio/sch search query
 https://github.com/search?type=code&q=repo:adammillerio%2Fsch+search+query
 ./sch.sh gh search all search query
-sch --app example_codex search gh search all search query
+sch search gh search all search query
 https://github.com/search?type=code&q=search+query
 ```
 
@@ -284,14 +278,13 @@ codex.add_command(
 
 Which registers code bookmark sets for click and flask:
 ```bash
-sch --app example_codex search click
+sch search click
 https://github.com/pallets/click
-./sch.sh click docs
-sch --app example_codex search click docs
+sch search click docs
 https://click.palletsprojects.com/en/8.1.x
-sch --app example_codex search flask
+sch search flask
 https://github.com/pallets/flask
-sch --app example_codex search flask docs
+sch search flask docs
 https://flask.palletsprojects.com/en/3.0.x/
 ```
 
@@ -323,7 +316,7 @@ def github(repo: str, *args: str) -> str:
 The first line of the docstring will become the command short help, which will 
 display in the sch_tree:
 ```bash
-sch --app example_codex search gh sch_tree
+sch search gh sch_tree
 gh - go to github or a view a repo
 +-- search - search a github repo
    +--all - search all of github
@@ -331,7 +324,7 @@ gh - go to github or a view a repo
 
 The entire docstring will be printed if `sch_help` is the first argument to any command:
 ```bash
-sch --app example_codex search gh sch_help
+sch search gh sch_help
 def sch gh(repo: Optional[str] = None) -> str:
 
         go to github or a view a repo
@@ -353,7 +346,7 @@ pip install waitress
 Then use the `waitress-serve` CLI to load and serve the Flask server:
 
 ```bash
-waitress-serve --port 5000 --call example_codex:create_app
+waitress-serve --port 5000 --call app:create_app
 ```
 
 More info on using Flask with Waitress is available in the [Flask Docs](https://flask.palletsprojects.com/en/2.3.x/deploying/waitress/)
@@ -363,5 +356,5 @@ https. Be sure to change the URL scheme when doing this or generated URLs will
 be incorrect:
 
 ```bash
-waitress-serve --port 5000 --url-scheme https --call example_codex:create_app
+waitress-serve --port 5000 --url-scheme https --call app:create_app
 ```

@@ -1,3 +1,4 @@
 .DS_Store
 __pycache__
 scholar_search.egg-info
+dist
