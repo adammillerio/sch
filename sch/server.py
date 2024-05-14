@@ -177,9 +177,18 @@ class CodexServer(Flask):
         command, command_args = self.resolve_command(*args)
 
         if not command:
-            # No command defined with this name.
-            logger.error(f"ERR command {spell} not found")
-            return self.sch_fail(f"command {spell} not found", 404)
+            if command := self.codex.get_default_command():
+                # Default Command is set, use it instead with ALL arguments
+                # provided.
+                command_args = args
+
+                logger.debug(
+                    f"DBG command {spell} not found, using default command {command}"
+                )
+            else:
+                # No command defined with this name and no default, give 404.
+                logger.error(f"ERR command {spell} not found")
+                return self.sch_fail(f"command {spell} not found", 404)
 
         # Only bother checking if there's a single argument.
         if len(command_args) == 1:
