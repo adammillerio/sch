@@ -668,7 +668,7 @@ class Command(NodeMixin):
                 # TODO: Figure out some way to make the display of the tag line
                 # justified.
                 tag_back_str = (
-                    f" [`back`{{.{RETURN_COLOR}}}](/sch?s={tree_cmd_str}sch_tree)"
+                    f" [`back`{{.{RETURN_COLOR.value}}}](/sch?s={tree_cmd_str}sch_tree)"
                     if tags and output_format is not OutputFormat.TXT
                     else ""
                 )
