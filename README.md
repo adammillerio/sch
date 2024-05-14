@@ -21,9 +21,8 @@ found in the "Advanced Usage" section below.
 ## TL; DR
 
 ```bash
-# Install scholar and pandoc
-pip install scholar-search
-brew install pandoc
+# Install scholar with pandoc
+pip install scholar-search[pandoc]
 
 # Clone and run sch against the example codex
 git clone https://github.com/adammillerio/sch.git
@@ -37,22 +36,18 @@ And go to http://localhost:5000/sch?s=sch_help for usage info.
 Scholar can be installed via pip:
 
 ```bash
+# With pandoc
+pip install scholar-search[pandoc]
+# Without pandoc (install via other means)
 pip install scholar-search
 ```
 
-Alternatively, it can be installed from a local clone of this repository:
-```bash
-pip install -e .
-```
+Rendering text pages depends on [`pandoc`](https://pandoc.org/). Scholar can be
+installed with the `pandoc` extra to include the
+[`pypandoc-binary`](https://pypi.org/project/pypandoc-binary/) package, which will
+also download `pandoc` itself.
 
-Rendering text pages depends on [`pandoc`](https://pandoc.org/), which can be
-installed via homebrew:
-```bash
-brew install pandoc
-```
-
-Or via native package management. Refer to the [Pandoc Manual](https://pandoc.org/installing.html)
-for more info.
+Refer to the [Pandoc Manual](https://pandoc.org/installing.html) for more info.
 
 Commands are loaded into Scholar via a "Codex", which is just a Python file that
 has a Flask app factory defined. This file can import other files or define
@@ -333,6 +328,28 @@ def sch gh(repo: Optional[str] = None) -> str:
             return https://github.com/{repo}
         else:
             return https://github.com
+```
+
+## Auto-Reloading
+
+To enable auto-reloading of the codex during development, run `sch` with the
+debug option, which enable's Flask's [Debug Mode](https://flask.palletsprojects.com/en/2.3.x/debugging/):
+
+```bash
+sch --debug run
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 275-051-761
+127.0.0.1 - - [13/May/2024 23:02:25] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [13/May/2024 23:02:25] "GET /sch?s=sch_tree HTTP/1.1" 200 -
+ * Detected change in '/Users/aemiller/sch/example/base.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 275-051-761
 ```
 
 ## Exposing to the Internet
