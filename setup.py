@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="scholar-search",
-    version="0.0.2",
+    version="0.0.3",
     license="MIT",
     description="a macro search bar",
     author="Adam Miller",

@@ -6,18 +6,24 @@ scripts which generate URLs. These URLs are then issued to the user via an HTTP
 redirect.
 
 The main use case of sch is as a search engine in a browser toolbar, with
-a predefined set of commands and search proxies.
+a predefined set of commands which "routes" you to the desired page or search
+engine.
 
 For a hands-on explanation and demonstration of Scholar as a tool, a public hosted
 instance is available: https://sch.luphy.net/sch?s=sch_tree
 
 As well as a general use doc: https://sch.luphy.net/sch?s=sch_help
 
-That being said, a key difference is that Scholar is intended to be run locally
-on the machine if possible. Information on hosting a public instance can be
-found in the "Advanced Usage" section below.
+A major difference is that Scholar is intended to be run locally or via a
+self-hosted public instance. To get an instance of Scholar up and running on
+a local machine, check the "Getting Started" guide below.
 
-# Install & Run
+To learn about writing commands, check the "Usage" section.
+
+Guidance for how to run a self-hosted public instance can also be found in the
+"Advanced Usage" section.
+
+# Getting Started
 ## TL; DR
 
 ```bash
@@ -337,7 +343,7 @@ can be configured to instead run a default command with all of the provided
 arguments:
 
 ```python
-from sch import codex, command, query_args
+from sch import codex, query_args
 
 
 # Default all not found commands to Google search
