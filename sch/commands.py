@@ -388,7 +388,9 @@ class Command(NodeMixin):
             colored_sig_parts.append(f"`{str(param)}`{node_color}")
 
         return (
-            "(" + ", ".join(colored_sig_parts) + f") -> `{retval}`{{.{RETURN_COLOR}}}"
+            "("
+            + ", ".join(colored_sig_parts)
+            + f") -> `{retval}`{{.{RETURN_COLOR.value}}}"
         )
 
     @property
