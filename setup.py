@@ -29,6 +29,7 @@ setup(
         "click",
         "pypandoc",
     ],
+    extras_require={"pandoc": ["pypandoc-binary"]},
     entry_points="""
     [console_scripts]
     sch=sch.cli:sch
