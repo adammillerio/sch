@@ -330,6 +330,30 @@ def sch gh(repo: Optional[str] = None) -> str:
             return https://github.com
 ```
 
+## Default Command
+
+If a command cannot be resolved during a query, a 404 is returned to the user. Scholar
+can be configured to instead run a default command with all of the provided
+arguments:
+
+```python
+from sch import codex, command, query_args
+
+
+# Default all not found commands to Google search
+@codex.default_command()
+def default_cmd(*args: str) -> str:
+    return f"https://google.com/search?q={query_args(*args)}"
+```
+
+The default command is like any other command except that it is always called
+with ALL arguments to the query:
+
+```
+sch search this is not a real command
+https://google.com/search?q=this+is+not+a+real+command
+```
+
 ## Auto-Reloading
 
 To enable auto-reloading of the codex during development, run `sch` with the

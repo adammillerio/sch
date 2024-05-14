@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 from importlib import import_module
-from typing import Any, Set, Optional
+from typing import Any, Callable, Set, Optional
 
 from sch.commands import bookmark, command, Command, CommandNotFoundError
 from sch.errors import CodexNotFound
 from sch.server import CodexServer
 from sch.utils import format_doc, query_args, escape_args, load_commands
+
+
+@command()
+def default_cmd(*args: str) -> str:
+    """scholar search engine"""
+
+    return "/sch"
 
 
 class Codex(Command):
@@ -19,15 +26,63 @@ class Codex(Command):
 
     Args:
         name: str. Name of the Codex.
+        default_command: Optional[Command]. If provided, this command will be
+            run instead of displaying a 404 if no Command can be resolved for
+            a given query.
     """
 
-    def __init__(self, name: str) -> None:
-        def codex_func(*args: str) -> str:
-            """scholar search engine"""
+    def __init__(self, name: str, default_command: Optional[Command] = None) -> None:
+        self._default_command = default_command
 
-            return "/sch"
+        super().__init__(command_func=default_cmd, name=name)
 
-        super().__init__(command_func=codex_func, name=name)
+    def get_default_command(self) -> Optional[Command]:
+        """Retrieve the default Command.
+
+        Returns:
+            default_cmd: Optional[Command]. Default command if any.
+        """
+
+        return self._default_command
+
+    def set_default_command(self, command: Command, *args: Any, **kwargs: Any) -> None:
+        """Set the default Command.
+
+        If a default Command is set, it will be run instead of displaying a 404
+        if no Command can be resolved for a given sch query. The default Command
+        is like any other Command, except that it is always called with ALL
+        arguments provided, including the unresolved Command "name", which is
+        instead interpreted as the first argument to the default Command.
+
+        Args:
+            command: Command. Default Command to set.
+        """
+
+        self._default_command = command
+
+    def default_command(self, *args: Any, **kwargs: Any) -> Callable[..., Command]:
+        """Default Command decorator.
+
+        This decorator can be used on any function to turn it into the default
+        Command for the codex, ie:
+
+        # Default all not found commands to Google search
+        @codex.default_command()
+        def default_cmd(*args: str) -> str:
+            return f"https://google.com/search?q={query_args(*args)}"
+
+        Returns:
+            command_decorator: Callable[..., Command]. Decorator for creating and
+                setting the default Command.
+        """
+
+        def decorator(func: Callable[..., str]) -> Command:
+            command = Command(command_func=func, *args, **kwargs)
+            self._default_command = command
+
+            return command
+
+        return decorator
 
     @staticmethod
     def load(path: str) -> None:
