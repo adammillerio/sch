@@ -8,13 +8,6 @@ from sch.server import CodexServer
 from sch.utils import format_doc, query_args, escape_args, load_commands
 
 
-@command()
-def default_cmd(*args: str) -> str:
-    """scholar search engine"""
-
-    return "/sch"
-
-
 class Codex(Command):
     """Root Codex
 
@@ -34,7 +27,12 @@ class Codex(Command):
     def __init__(self, name: str, default_command: Optional[Command] = None) -> None:
         self._default_command = default_command
 
-        super().__init__(command_func=default_cmd, name=name)
+        def root_cmd(*args: str) -> str:
+            """scholar search engine"""
+
+            return "/sch"
+
+        super().__init__(command_func=root_cmd, name=name)
 
     def get_default_command(self) -> Optional[Command]:
         """Retrieve the default Command.

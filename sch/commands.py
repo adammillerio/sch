@@ -232,7 +232,7 @@ class Command(NodeMixin):
     separator = " "
 
     # anytree: General use Node Resolver for command lookups.
-    resolver: Resolver = Resolver("name")
+    resolver: Resolver = Resolver("name", relax=True)
 
     def __init__(
         self,
@@ -417,11 +417,11 @@ class Command(NodeMixin):
         return self.command_func(*args)
 
     def get_command(self, name: str) -> Command:
-        try:
-            return self.resolver.get(self, name)
-        except ChildResolverError:
+        if command := self.resolver.get(self, name):
+            return command
+        else:
             raise CommandNotFoundError(f"no command {name} found")
-
+    
     def add_command(
         self,
         command: Command,
@@ -451,6 +451,9 @@ class Command(NodeMixin):
         else:
             if not command.name:
                 raise ValueError("command name must be provided")
+        
+        if self.resolver.get(self, command.name):
+            raise ValueError(f"command '{self.full_scope}{command.name}' already exists")
 
         if tags:
             command.tags = set(tags).union(command.tags)
