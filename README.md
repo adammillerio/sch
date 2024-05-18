@@ -37,6 +37,9 @@ sch run
 
 And go to http://localhost:5000/sch?s=sch_help for usage info.
 
+The public collection of codexes is available at
+[adammillerio/sch_public](https://github.com/adammillerio/sch_public)
+
 ## Detailed
 
 Scholar can be installed via pip:
