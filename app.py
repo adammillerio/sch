@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from sch import codex, load_commands, query_args
+from sch import codex, CodexServer, load_commands, query_args
 
 import example
 
@@ -19,5 +19,5 @@ def default_cmd(*args: str) -> str:
 
 # Flask Application Factory
 # Run with flask --app example_codex run
-def create_app():
+def create_app() -> CodexServer:
     return codex.create_app()

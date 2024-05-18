@@ -33,6 +33,10 @@ Scholar is open source and is intended to be run locally:
 [`README.md`](https://github.com/adammillerio/sch/blob/main/README.md) provides a guide for getting started. This public instance can still
 be used for demonstration purposes.
 
+The public collection of codexes is also open source:
+
+[`sch gh adammillerio/sch_public`]({full_url}?s=gh+adammillerio/sch_public) -> [https://github.com/adammillerio/sch_public](https://github.com/adammillerio/sch_public)
+
 For instructions on how to set up Scholar in the browser, as well as more general
 information on commands and usage, see below.
 
@@ -154,7 +158,7 @@ Others are just bookmarks to cool stuff:
 
 ### txt mode
 
-Scholar can be used in the terminal by passing `&smn_txt=true` to any command, which
+Scholar can be used in the terminal by passing `&sch_txt=true` to any command, which
 will enable plain-text only output:
 
 [`curl '{full_url}?s=gh+sch_help&sch_txt=true'`]({full_url}?s=gh+sch_help&sch_txt=true)
