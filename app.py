@@ -18,6 +18,6 @@ def default_cmd(*args: str) -> str:
 
 
 # Flask Application Factory
-# Run with flask --app example_codex run
+# Run with sch run
 def create_app() -> CodexServer:
     return codex.create_app()
