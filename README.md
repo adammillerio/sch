@@ -408,3 +408,31 @@ be incorrect:
 ```bash
 waitress-serve --port 5000 --url-scheme https --call app:create_app
 ```
+
+# Development
+
+Install in development mode:
+```bash
+pip3 install -e '.[dev]'
+```
+
+## Type Checking
+
+Ensure no type errors are present with [pyre](https://github.com/facebook/pyre-check):
+
+```bash
+pyre check              
+ƛ No type errors found
+```
+
+**Note**: Pyre daemonizes itself on first run for faster subsequent executions. Be
+sure to shut it down with `pyre kill` when finished.
+
+## Formatting
+
+Format code with the [black](https://github.com/psf/black) formatter:
+
+```bash
+black click_tree
+All done! ✨ 🍰 ✨
+```
