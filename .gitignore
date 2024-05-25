@@ -2,3 +2,4 @@
 __pycache__
 scholar_search.egg-info
 dist
+.pyre

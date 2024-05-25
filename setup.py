@@ -29,7 +29,7 @@ setup(
         "click",
         "pypandoc",
     ],
-    extras_require={"pandoc": ["pypandoc-binary"]},
+    extras_require={"pandoc": ["pypandoc-binary"], "dev": ["black", "pyre-check"]},
     entry_points="""
     [console_scripts]
     sch=sch.cli:sch
