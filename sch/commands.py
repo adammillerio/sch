@@ -38,7 +38,7 @@ SCH_HELP = """\
 
 {error_msg}
 
-**def** [{colored_full_scope}](/sch?s={scope_plus}){colored_command_signature}:
+**def** [{colored_full_scope}{colored_alias_names}](/sch?s={scope_plus}){colored_command_signature}:
 ```cyan
     {docstring}
 ```
@@ -125,7 +125,9 @@ class OutputFormat(str, Enum):
 
 
 def command(
-    name: Optional[str] = None, tags: Optional[Iterable[str]] = None
+    name: Optional[str] = None,
+    tags: Optional[Iterable[str]] = None,
+    aliases: Optional[Iterable[str]] = None,
 ) -> Callable[..., Command]:
     """Create a "generic" command.
 
@@ -138,6 +140,7 @@ def command(
         name: Optional[str]. Command Name. If this is not provided at definition,
             it must be provided as an argument to add_command.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
+        aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
 
     Returns:
         command_decorator: Callable[..., Command]. Decorator for creating a
@@ -145,7 +148,7 @@ def command(
     """
 
     def decorator(func: Callable[..., str]) -> Command:
-        return Command(command_func=func, name=name, tags=tags)
+        return Command(command_func=func, name=name, tags=tags, aliases=aliases)
 
     return decorator
 
@@ -154,6 +157,7 @@ def bookmark(
     url: str,
     short_help: Optional[str] = None,
     tags: Optional[Iterable[str]] = None,
+    aliases: Optional[Iterable[str]] = None,
 ) -> Command:
     """Bookmark Command.
 
@@ -170,7 +174,7 @@ def bookmark(
         short_help: Optional[str]. Any additional info to be provided in the
             Command help.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
-        **kwargs: Any. Forwarded to the @command decorator.
+        aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
 
     Returns:
         bookmark_command: Command.
@@ -182,7 +186,7 @@ def bookmark(
 
     help_str = short_help if short_help else ""
 
-    @command(tags=tag_set)
+    @command(tags=tag_set, aliases=aliases)
     @format_doc(url=url, help_str=help_str)
     def bookmark_command() -> str:
         """{help_str}
@@ -224,6 +228,7 @@ class Command(NodeMixin):
         command_func: Callable[..., str]. Scholar function to wrap.
         name: Optional[str]. Name of this Scholar Command.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
+        aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
         parent: Optional[Command]. Parent Command, if any.
         children: Optional[Tuple[Command, ...]]. Child (Sub) commands, if any.
     """
@@ -239,6 +244,7 @@ class Command(NodeMixin):
         command_func: Callable[..., str],
         name: Optional[str] = None,
         tags: Optional[Iterable[str]] = None,
+        aliases: Optional[Iterable[str]] = None,
         parent: Optional[Command] = None,
         children: Optional[Tuple[Command, ...]] = None,
     ) -> None:
@@ -247,6 +253,11 @@ class Command(NodeMixin):
         self.name = name
         self.command_func = command_func
         self._tags: Set[str] = set(tags) if tags else set()
+        self.aliases: Set[str] = set(aliases) if aliases else set()
+
+        # Mapping of any registered command aliases to the actual child command
+        # name.
+        self.child_aliases: Dict[str, str] = {}
 
         self.parent = parent
         if children:
@@ -308,6 +319,13 @@ class Command(NodeMixin):
             return ""
 
     @property
+    def alias_names(self) -> str:
+        # {foobar}
+        aliases = ",".join(self.aliases)
+
+        return f"{{{aliases}}}" if aliases else ""
+
+    @property
     def scope(self) -> str:
         # gh search
         # Don't include the root Codex in the scope. See full_scope for the
@@ -340,6 +358,11 @@ class Command(NodeMixin):
     def colored_name(self) -> str:
         # `sch`{.green}
         return f"`{self.name}`{self.color_class}"
+
+    @property
+    def colored_alias_names(self) -> str:
+        # `{s}`{.green}
+        return f"`{self.alias_names}`{self.color_class}" if self.alias_names else ""
 
     @property
     def colored_full_scope(self) -> str:
@@ -417,16 +440,24 @@ class Command(NodeMixin):
         return self.command_func(*args)
 
     def get_command(self, name: str) -> Command:
-        if command := self.resolver.get(self, name):
-            return command
+        if command_name := self.child_aliases.get(name, None):
+            # Name provided is an alias to another command, retrieve it.
+            command = self.resolver.get(self, command_name)
         else:
+            # Attempt to resolve command with provided name.
+            command = self.resolver.get(self, name)
+
+        if not command:
             raise CommandNotFoundError(f"no command {name} found")
-    
+
+        return command
+
     def add_command(
         self,
         command: Command,
         name: Optional[str] = None,
         tags: Optional[Iterable[str]] = None,
+        aliases: Optional[Iterable[str]] = None,
     ) -> None:
         """Register a Command as a sub-Command.
 
@@ -438,6 +469,7 @@ class Command(NodeMixin):
             name: Optional[str]. Name override for Command.
             tags: Optional[Iterable[str]]. Additional tags to apply to Command, if
                 any.
+            aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
 
         Raises:
             ValueError: If a command name was not provided, and the Command has
@@ -451,9 +483,11 @@ class Command(NodeMixin):
         else:
             if not command.name:
                 raise ValueError("command name must be provided")
-        
+
         if self.resolver.get(self, command.name):
-            raise ValueError(f"command '{self.full_scope}{command.name}' already exists")
+            raise ValueError(
+                f"command '{self.full_scope}{command.name}' already exists"
+            )
 
         if tags:
             command.tags = set(tags).union(command.tags)
@@ -461,11 +495,25 @@ class Command(NodeMixin):
         # Inherit all Command tags from the parent.
         command.tags = self.tags.union(command.tags)
 
+        if aliases:
+            command.aliases = set(aliases).union(command.aliases)
+
+        for alias in command.aliases:
+            if existing_alias := self.child_aliases.get(alias, None):
+                raise ValueError(
+                    f"command alias '{self.full_scope}{alias}' to '{existing_alias}' already exists"
+                )
+
+            self.child_aliases[alias] = command.name
+
         # Register the Command.
         command.parent = self
 
     def command(
-        self, name: str, tags: Optional[Iterable[str]] = None
+        self,
+        name: str,
+        tags: Optional[Iterable[str]] = None,
+        aliases: Optional[Iterable[str]] = None,
     ) -> Callable[..., Command]:
         """Create and register a Command to this one.
 
@@ -475,6 +523,7 @@ class Command(NodeMixin):
         Args:
             name: str. Command name.
             tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
+            aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
 
         Returns:
             command_decorator: Callable[..., Command]. Decorator for creating and
@@ -483,7 +532,7 @@ class Command(NodeMixin):
 
         def decorator(func: Callable[..., str]) -> Command:
             command = Command(name=name, command_func=func, tags=tags)
-            self.add_command(command)
+            self.add_command(command, aliases=aliases)
 
             return command
 
@@ -535,6 +584,7 @@ class Command(NodeMixin):
             docstring=self.docstring,
             command_name=self.name,
             colored_command_signature=self.colored_signature,
+            colored_alias_names=self.colored_alias_names,
             # Don't include code backticks if no error_msg... really just need
             # to switch to jinja...
             error_msg=f"```{{.brcyan}}\n{error_msg}\n```" if error_msg else "",
@@ -624,10 +674,10 @@ class Command(NodeMixin):
             # Add a link to invoking this command on the name itself, using the
             # full path.
             md_node_name = (
-                f"[{node.name}{node.color_class}](/sch?s={command_str})"
+                f"[{node.colored_name}{node.colored_alias_names}](/sch?s={command_str})"
                 if command_str
                 # If it's the root command, just link back to tree.
-                else f"[{node.name}{node.color_class}](/sch?s=sch_tree)"
+                else f"[{node.colored_name}](/sch?s=sch_tree)"
             )
 
             if output_format is not OutputFormat.TXT:

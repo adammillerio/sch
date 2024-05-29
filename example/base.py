@@ -4,7 +4,9 @@ from sch import codex
 TAGS = ["base"]
 
 
-codex.add_bookmark("help", "/sch?s=sch_help", "what is this?", tags=TAGS)
+codex.add_bookmark(
+    "help", "/sch?s=sch_help", "what is this?", tags=TAGS, aliases=["man"]
+)
 codex.add_bookmark("back", "/sch?s=sch_tree", "back to main tree", tags=TAGS)
 codex.add_bookmark("<", "/sch?s=sch_tree", "back to main tree", tags=TAGS)
 codex.add_bookmark("sch", "/sch?s=sch_tree", "sch main tree", tags=TAGS)
