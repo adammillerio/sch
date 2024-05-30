@@ -339,6 +339,33 @@ def sch gh(repo: Optional[str] = None) -> str:
             return https://github.com
 ```
 
+## Command Aliases
+
+Commands can have aliases, which are alternative names that can be used during
+command resolution:
+
+```python
+from sch import codex
+
+@codex.command("help", aliases=["man"])
+def help() -> str:
+    return "/sch?s=sch_help"
+```
+
+```bash
+sch search help sch_help      
+def sch help{man}() -> str:
+        return /sch?s=sch_help
+
+sch search help         
+/sch?s=sch_help
+
+sch search man 
+/sch?s=sch_help
+```
+
+Any command aliases will be displayed in curly braces next to the command name.
+
 ## Default Command
 
 If a command cannot be resolved during a query, a 404 is returned to the user. Scholar
