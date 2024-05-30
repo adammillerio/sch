@@ -366,6 +366,60 @@ sch search man
 
 Any command aliases will be displayed in curly braces next to the command name.
 
+## Command Tags
+
+As an alternative method of organization, commands can be tagged on creation or
+during registration:
+
+```python
+from sch import codex
+
+@codex.command("google", tags=["google"])
+def google() -> str:
+    """google search""""
+
+    return "https://google.com"
+
+
+@google.command("drive", tags=["drive"])
+def google_drive() -> str:
+    """google drive"""
+
+    return "https://drive.google.com"
+
+
+@codex.command("youtube", tags=["google", "youtube"])
+def youtube() -> str:
+    """youtube"""
+
+    return "https://youtube.com"
+```
+
+Tags can be used to filter the tree of commands:
+
+```bash
+sch search --tag google sch_tree
+sch - scholar search engine
+|-- google - google search
+|   +-- drive - google drive
++-- youtube - youtube
+
+sch search --tag drive sch_tree
+sch - scholar search engine
++-- google - google search
+   +-- drive - google drive
+
+sch search --tag youtube sch_tree
+sch - scholar search engine
++-- youtube - youtube
+```
+
+Subcommands inherit the tags of their parent command. For example, the `google drive`
+command has both the `drive` tag, and the `google` tag from the parent command.
+
+In the web UI, all tags defined under the current view of commands will be shown
+at the top. Clicking any tag will manually filter to only that tag.
+
 ## Default Command
 
 If a command cannot be resolved during a query, a 404 is returned to the user. Scholar
