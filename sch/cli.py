@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-from typing import Optional, Tuple
+from typing import cast, Optional, Tuple
 from urllib.parse import quote_plus
 
 import click
 from flask import request
 from flask.cli import FlaskGroup, ScriptInfo, pass_script_info
+
+from sch.server import CodexServer
 
 sch = FlaskGroup(
     name="sch",
@@ -52,7 +54,7 @@ def sch_run(
     sch yt test thing -> /sch?s=yt+test+search -> https://www.youtube.com/results?search_query=test+search
     """
 
-    codex_server = info.load_app()
+    codex_server = cast(CodexServer, info.load_app())
 
     sch_tags = f'&sch_tags={",".join(tag)}' if tag else ""
 

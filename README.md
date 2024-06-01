@@ -243,6 +243,9 @@ These are search "proxies", which are basically just commands which take up all
 the unused arguments as `*args` and sends them off as a search to a specific
 place, such as GitHub. This is done via the `query_args` utility function.
 
+For ease of use, there is also an `add_search` command for adding searches, similar
+to `add_bookmark`.
+
 # Advanced Usage
 ## Composing Commands
 Commands can be composed without being registered to Scholar via the "generic" 
@@ -514,6 +517,6 @@ sure to shut it down with `pyre kill` when finished.
 Format code with the [black](https://github.com/psf/black) formatter:
 
 ```bash
-black click_tree
+black sch
 All done! ✨ 🍰 ✨
 ```

@@ -2,7 +2,7 @@
 from importlib import import_module
 from typing import Any, Callable, Set, Optional
 
-from sch.commands import bookmark, command, Command, CommandNotFoundError
+from sch.commands import bookmark, command, Command, CommandNotFoundError, search
 from sch.errors import CodexNotFound
 from sch.server import CodexServer
 from sch.utils import format_doc, query_args, escape_args, load_commands
