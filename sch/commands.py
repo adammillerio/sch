@@ -5,9 +5,9 @@ from copy import deepcopy
 from enum import Enum
 from functools import cache
 from inspect import getdoc, signature
-from typing import Any, Callable, Optional, Tuple, List, Set, Iterable
+from typing import Any, Callable, Dict, Optional, Tuple, List, Set, Iterable
 
-from sch.utils import CyclicalList, format_doc
+from sch.utils import CyclicalList, format_doc, query_args, escape_args
 
 from anytree import (
     AbstractStyle,
@@ -197,6 +197,66 @@ def bookmark(
         return url
 
     return bookmark_command
+
+
+def search(
+    url: str,
+    fallback_url: str,
+    short_help: Optional[str] = None,
+    escaped: bool = False,
+    tags: Optional[Iterable[str]] = None,
+    aliases: Optional[Iterable[str]] = None,
+) -> Command:
+    """Search Command.
+
+    A Search Command is a Command which will issue a query with all provided
+    arguments to a provided URL, which is typically a search engine. In addition,
+    a fallback_url is provided, which will be returned if no search arguments
+    are provided.
+
+    By default, search queries are quoted (test+search) rather than escaped
+    (test%20search). This can be changed by passing escaped=True.
+
+    All searches have the "search" Command tag.
+
+    Args:
+        url: str. Search URL to redirect search query to.
+        fallback_url: str. URL to redirect to when no query is provided.
+        short_help: Optional[str]. Any additional info to be provided in the
+            Command help.
+        escaped: bool. Whether or not the search query should be escaped rather
+            than quoted. Defaults to False.
+        tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
+        aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+
+    Returns:
+        search_command: Command.
+    """
+    tag_set = {"search"}
+    if tags:
+        tag_set.update(tags)
+
+    help_str = short_help if short_help else ""
+
+    @command(tags=tag_set, aliases=aliases)
+    @format_doc(url=url, fallback_url=fallback_url, help_str=help_str)
+    def search_command(*args: str) -> str:
+        """{help_str}
+
+        if args:
+            {url}{{*args}}
+        else:
+            return {fallback_url}
+        """
+
+        query = query_args(*args) if not escaped else escape_args(*args)
+
+        if args:
+            return f"{url}{query}"
+        else:
+            return fallback_url
+
+    return search_command
 
 
 class CommandNotFoundError(Exception):
@@ -458,7 +518,7 @@ class Command(NodeMixin):
         name: Optional[str] = None,
         tags: Optional[Iterable[str]] = None,
         aliases: Optional[Iterable[str]] = None,
-    ) -> None:
+    ) -> Command:
         """Register a Command as a sub-Command.
 
         If a name is provided, it will replace any name defined on the Command
@@ -470,6 +530,9 @@ class Command(NodeMixin):
             tags: Optional[Iterable[str]]. Additional tags to apply to Command, if
                 any.
             aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+
+        Returns:
+            command: Command.
 
         Raises:
             ValueError: If a command name was not provided, and the Command has
@@ -483,6 +546,8 @@ class Command(NodeMixin):
         else:
             if not command.name:
                 raise ValueError("command name must be provided")
+
+            name = command.name
 
         if self.resolver.get(self, command.name):
             raise ValueError(
@@ -504,10 +569,12 @@ class Command(NodeMixin):
                     f"command alias '{self.full_scope}{alias}' to '{existing_alias}' already exists"
                 )
 
-            self.child_aliases[alias] = command.name
+            self.child_aliases[alias] = name
 
         # Register the Command.
         command.parent = self
+
+        return command
 
     def command(
         self,
@@ -532,9 +599,8 @@ class Command(NodeMixin):
 
         def decorator(func: Callable[..., str]) -> Command:
             command = Command(name=name, command_func=func, tags=tags)
-            self.add_command(command, aliases=aliases)
 
-            return command
+            return self.add_command(command, aliases=aliases)
 
         return decorator
 
@@ -544,20 +610,60 @@ class Command(NodeMixin):
         url: str,
         short_help: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Command:
         """Register a Bookmark Command.
 
         A Bookmark Command is just a normal Command that returns a provided URL, with
         no other execution. It also has some custom help formatting.
 
         Args:
+            name: str. Name to register Command under.
             url: str. URL to redirect to for bookmark.
             short_help: Optional[str]. Any additional info to be provided in the
                 Command help.
             **kwargs: Passed on to @command decorator.
+
+        Returns:
+            command: Command.
         """
 
-        self.add_command(bookmark(url, short_help, **kwargs), name)
+        cmd = bookmark(url, short_help, **kwargs)
+
+        return self.add_command(cmd, name)
+
+    def add_search(
+        self,
+        name: str,
+        url: str,
+        fallback_url: str,
+        short_help: Optional[str] = None,
+        escaped: bool = False,
+        **kwargs: Any,
+    ) -> Command:
+        """Register a Search Command.
+
+        A Search Command is a Command which will issue a query with all provided
+        arguments to a provided URL, which is typically a search engine. In addition,
+        a fallback_url is provided, which will be returned if no search arguments
+        are provided.
+
+        Args:
+            name: str. Name to register Command under.
+            url: str. Search URL to redirect search query to.
+            fallback_url: str. URL to redirect to when no query is provided.
+            short_help: Optional[str]. Any additional info to be provided in the
+                Command help.
+            escaped: bool. Whether or not the search query should be escaped rather
+                than quoted. Defaults to False.
+            **kwargs: Passed on to @command decorator.
+
+        Returns:
+            command: Command.
+        """
+
+        cmd = search(url, fallback_url, short_help, escaped, **kwargs)
+
+        return self.add_command(cmd, name)
 
     @cache
     def render_help(
