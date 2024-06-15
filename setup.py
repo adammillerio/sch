@@ -3,13 +3,13 @@ from setuptools import setup, find_packages
 
 setup(
     name="scholar-search",
-    version="0.0.4",
+    version="0.0.5",
     license="MIT",
     description="a macro search bar",
     author="Adam Miller",
     author_email="miller@adammiller.io",
     url="https://github.com/adammillerio/sch",
-    download_url="https://github.com/adammillerio/sch/archive/v0.0.4.tar.gz",
+    download_url="https://github.com/adammillerio/sch/archive/v0.0.5.tar.gz",
     keywords=[],
     classifiers=[
         "Development Status :: 3 - Alpha",
