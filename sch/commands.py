@@ -5,6 +5,7 @@ from copy import deepcopy
 from enum import Enum
 from functools import cache
 from inspect import getdoc, signature
+from re import compile as re_compile, Pattern
 from typing import Any, Callable, Dict, Optional, Tuple, List, Set, Iterable
 
 from sch.utils import CyclicalList, format_doc, query_args, escape_args
@@ -128,6 +129,8 @@ def command(
     name: Optional[str] = None,
     tags: Optional[Iterable[str]] = None,
     aliases: Optional[Iterable[str]] = None,
+    disable_tree: bool = False,
+    disable_help: bool = False,
 ) -> Callable[..., Command]:
     """Create a "generic" command.
 
@@ -141,6 +144,10 @@ def command(
             it must be provided as an argument to add_command.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
         aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+        disable_tree: bool. If True, sch_tree will be disabled and forwarded through
+            as a normal argument.
+        disable_help: bool. If True, sch_help will be disabled and forwarded through
+            as a normal argument.
 
     Returns:
         command_decorator: Callable[..., Command]. Decorator for creating a
@@ -148,7 +155,14 @@ def command(
     """
 
     def decorator(func: Callable[..., str]) -> Command:
-        return Command(command_func=func, name=name, tags=tags, aliases=aliases)
+        return Command(
+            command_func=func,
+            name=name,
+            tags=tags,
+            aliases=aliases,
+            disable_tree=disable_tree,
+            disable_help=disable_help,
+        )
 
     return decorator
 
@@ -158,6 +172,8 @@ def bookmark(
     short_help: Optional[str] = None,
     tags: Optional[Iterable[str]] = None,
     aliases: Optional[Iterable[str]] = None,
+    disable_tree: bool = False,
+    disable_help: bool = False,
 ) -> Command:
     """Bookmark Command.
 
@@ -175,6 +191,10 @@ def bookmark(
             Command help.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
         aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+        disable_tree: bool. If True, sch_tree will be disabled and forwarded through
+            as a normal argument.
+        disable_help: bool. If True, sch_help will be disabled and forwarded through
+            as a normal argument.
 
     Returns:
         bookmark_command: Command.
@@ -186,7 +206,12 @@ def bookmark(
 
     help_str = short_help if short_help else ""
 
-    @command(tags=tag_set, aliases=aliases)
+    @command(
+        tags=tag_set,
+        aliases=aliases,
+        disable_tree=disable_tree,
+        disable_help=disable_help,
+    )
     @format_doc(url=url, help_str=help_str)
     def bookmark_command() -> str:
         """{help_str}
@@ -206,6 +231,8 @@ def search(
     escaped: bool = False,
     tags: Optional[Iterable[str]] = None,
     aliases: Optional[Iterable[str]] = None,
+    disable_tree: bool = False,
+    disable_help: bool = False,
 ) -> Command:
     """Search Command.
 
@@ -228,6 +255,10 @@ def search(
             than quoted. Defaults to False.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
         aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+        disable_tree: bool. If True, sch_tree will be disabled and forwarded through
+            as a normal argument.
+        disable_help: bool. If True, sch_help will be disabled and forwarded through
+            as a normal argument.
 
     Returns:
         search_command: Command.
@@ -238,13 +269,18 @@ def search(
 
     help_str = short_help if short_help else ""
 
-    @command(tags=tag_set, aliases=aliases)
+    @command(
+        tags=tag_set,
+        aliases=aliases,
+        disable_tree=disable_tree,
+        disable_help=disable_help,
+    )
     @format_doc(url=url, fallback_url=fallback_url, help_str=help_str)
     def search_command(*args: str) -> str:
         """{help_str}
 
         if args:
-            {url}{{*args}}
+            return {url}{{*args}}
         else:
             return {fallback_url}
         """
@@ -289,6 +325,10 @@ class Command(NodeMixin):
         name: Optional[str]. Name of this Scholar Command.
         tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
         aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+        disable_tree: bool. If True, sch_tree will be disabled and forwarded through
+            as a normal argument.
+        disable_help: bool. If True, sch_help will be disabled and forwarded through
+            as a normal argument.
         parent: Optional[Command]. Parent Command, if any.
         children: Optional[Tuple[Command, ...]]. Child (Sub) commands, if any.
     """
@@ -299,12 +339,17 @@ class Command(NodeMixin):
     # anytree: General use Node Resolver for command lookups.
     resolver: Resolver = Resolver("name", relax=True)
 
+    # Command name regex, used for validation.
+    NAME_REGEX: Pattern[str] = re_compile(r"^[\w-]+$")
+
     def __init__(
         self,
         command_func: Callable[..., str],
         name: Optional[str] = None,
         tags: Optional[Iterable[str]] = None,
         aliases: Optional[Iterable[str]] = None,
+        disable_tree: bool = False,
+        disable_help: bool = False,
         parent: Optional[Command] = None,
         children: Optional[Tuple[Command, ...]] = None,
     ) -> None:
@@ -314,6 +359,8 @@ class Command(NodeMixin):
         self.command_func = command_func
         self._tags: Set[str] = set(tags) if tags else set()
         self.aliases: Set[str] = set(aliases) if aliases else set()
+        self.disable_tree = disable_tree
+        self.disable_help = disable_help
 
         # Mapping of any registered command aliases to the actual child command
         # name.
@@ -477,6 +524,20 @@ class Command(NodeMixin):
         )
 
     @property
+    def colored_tree_symbol(self) -> str:
+        # > or >* if disabled.
+        symbol = ">" if not self.disable_tree else ">*"
+
+        return f"`{symbol}`{self.color_class}"
+
+    @property
+    def colored_help_symbol(self) -> str:
+        # ? or ?* if disabled.
+        symbol = "?" if not self.disable_help else "?*"
+
+        return f"`{symbol}`{self.color_class}"
+
+    @property
     def docstring(self) -> str:
         command_help = getdoc(self.command_func)
         if command_help:
@@ -511,6 +572,26 @@ class Command(NodeMixin):
             raise CommandNotFoundError(f"no command {name} found")
 
         return command
+
+    @classmethod
+    def validate_command_name(cls, name: str) -> None:
+        """Validate a command name.
+
+        This validates the supplied command name against a regex ensuring that
+        command names only contain word characters (\w) or dashes.
+
+        Args:
+            name: str. Command name to validate.
+
+        Raises:
+            ValueError: If command name is invalid.
+        """
+
+        if not cls.NAME_REGEX.fullmatch(name):
+            raise ValueError(
+                f"invalid command name '{name}', names can only contain word "
+                "characters ([a-zA-Z0-9_]) or dashes (-)"
+            )
 
     def add_command(
         self,
@@ -549,6 +630,9 @@ class Command(NodeMixin):
 
             name = command.name
 
+        # Validate command name prior to insertion.
+        self.validate_command_name(command.name)
+
         if self.resolver.get(self, command.name):
             raise ValueError(
                 f"command '{self.full_scope}{command.name}' already exists"
@@ -581,6 +665,8 @@ class Command(NodeMixin):
         name: str,
         tags: Optional[Iterable[str]] = None,
         aliases: Optional[Iterable[str]] = None,
+        disable_tree: bool = False,
+        disable_help: bool = False,
     ) -> Callable[..., Command]:
         """Create and register a Command to this one.
 
@@ -591,6 +677,10 @@ class Command(NodeMixin):
             name: str. Command name.
             tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
             aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+            disable_tree: bool. If True, sch_tree will be disabled and forwarded through
+                as a normal argument.
+            disable_help: bool. If True, sch_help will be disabled and forwarded through
+                as a normal argument.
 
         Returns:
             command_decorator: Callable[..., Command]. Decorator for creating and
@@ -598,7 +688,13 @@ class Command(NodeMixin):
         """
 
         def decorator(func: Callable[..., str]) -> Command:
-            command = Command(name=name, command_func=func, tags=tags)
+            command = Command(
+                name=name,
+                command_func=func,
+                tags=tags,
+                disable_tree=disable_tree,
+                disable_help=disable_help,
+            )
 
             return self.add_command(command, aliases=aliases)
 
@@ -789,17 +885,17 @@ class Command(NodeMixin):
             if output_format is not OutputFormat.TXT:
                 # Add a (?) that links to the sch_help for this command.
                 md_help_link = (
-                    f" [`?`{node.color_class}](/sch?s={command_str}+sch_help)"
+                    f" [{node.colored_help_symbol}](/sch?s={command_str}+sch_help)"
                     if command_str
                     # Root tree, just link to main help.
-                    else f" [`?`{node.color_class}](/sch?s=sch_help)"
+                    else f" [{node.colored_help_symbol}](/sch?s=sch_help)"
                 )
                 # Add a (>) that links to the scoped sch_tree for this command.
                 md_tree_link = (
-                    f" [`>`{node.color_class}](/sch?s={command_str}+sch_tree)"
+                    f" [{node.colored_tree_symbol}](/sch?s={command_str}+sch_tree)"
                     if command_str
                     # Root tree, just link back to the root tree.
-                    else f" [`>`{node.color_class}](/sch?s=sch_tree)"
+                    else f" [{node.colored_tree_symbol}](/sch?s=sch_tree)"
                 )
             else:
                 # These are meaningless in plain text, so don't render.
@@ -807,7 +903,13 @@ class Command(NodeMixin):
                 md_tree_link = ""
 
             # Add a suffix which shows any defined short_help.
-            help_str = f" - {node.short_help}" if node.short_help else ""
+            if node.short_help:
+                if len(node.short_help) > 57:
+                    help_str = f" - {node.short_help[:54]}..."
+                else:
+                    help_str = f" - {node.short_help}"
+            else:
+                help_str = ""
 
             if first_row:
                 # First row: Render the scoped "command prompt" as well as the

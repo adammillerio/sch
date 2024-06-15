@@ -493,6 +493,40 @@ be incorrect:
 waitress-serve --port 5000 --url-scheme https --call app:create_app
 ```
 
+## Other Scholar Instances
+
+Other Scholar instances can be added like any other search engine:
+
+```python
+codex.add_search(
+    "foo",
+    "http://foo.local:8432/sch?s=",
+    "http://foo.local:8432/sch?s=sch_tree",
+    "foo controller",
+    disable_tree=True,
+    disable_help=True,
+)
+```
+
+The built-in tree and help commands are also disabled, so that they can be passed
+through and handled by the remote instance. This is shown with an asterisk next
+to the command options in the menu:
+```
+foo - foo controller ?* >*
+```
+
+Searches prefixed with `foo` will now be passed through:
+
+```bash
+smn sch foo
+http://foo.local:8432/sch?s=sch_tree
+smn sch foo test search
+http://foo.local:8432/sch?s=test+search
+```
+
+This pattern is useful for exposing quick access to local information and tasks 
+on remote hosts.
+
 # Development
 
 Install in development mode:
