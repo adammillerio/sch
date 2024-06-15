@@ -195,9 +195,11 @@ class CodexServer(Flask):
             # Check if this is a scoped builtin command.
             match command_args[0].lower():
                 case "sch_tree" | ">":
-                    return self.sch_tree(command)
+                    if not command.disable_tree:
+                        return self.sch_tree(command)
                 case "sch_help" | "?":
-                    return self.sch_help(command)
+                    if not command.disable_help:
+                        return self.sch_help(command)
 
         # Call Command function to get redirect URL
         # github()
