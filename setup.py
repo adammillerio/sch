@@ -3,13 +3,13 @@ from setuptools import setup, find_packages
 
 setup(
     name="scholar-search",
-    version="0.0.5",
+    version="0.0.6",
     license="MIT",
     description="a macro search bar",
     author="Adam Miller",
     author_email="miller@adammiller.io",
     url="https://github.com/adammillerio/sch",
-    download_url="https://github.com/adammillerio/sch/archive/v0.0.5.tar.gz",
+    download_url="https://github.com/adammillerio/sch/archive/v0.0.6.tar.gz",
     keywords=[],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -29,7 +29,7 @@ setup(
         "click",
         "pypandoc",
     ],
-    extras_require={"pandoc": ["pypandoc-binary"], "dev": ["black", "pyre-check"]},
+    extras_require={"pandoc": ["pypandoc-binary"], "dev": ["ruff", "pyre-check"]},
     entry_points="""
     [console_scripts]
     sch=sch.cli:sch
