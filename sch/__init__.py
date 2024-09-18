@@ -75,7 +75,7 @@ class Codex(Command):
         """
 
         def decorator(func: Callable[..., str]) -> Command:
-            command = Command(command_func=func, *args, **kwargs)
+            command = Command(command_func=func, name="sch", *args, **kwargs)
             self._default_command = command
 
             return command

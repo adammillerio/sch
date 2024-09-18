@@ -18,6 +18,10 @@ A major difference is that Scholar is intended to be run locally or via a
 self-hosted public instance. To get an instance of Scholar up and running on
 a local machine, check the "Getting Started" guide below.
 
+Scholar can also provide an interactive completion CLI using
+[fzf](https://github.com/junegunn/fzf). See [tools/complete.sh](tools/complete.sh) for
+an example.
+
 To learn about writing commands, check the "Usage" section.
 
 Guidance for how to run a self-hosted public instance can also be found in the
@@ -548,9 +552,9 @@ sure to shut it down with `pyre kill` when finished.
 
 ## Formatting
 
-Format code with the [black](https://github.com/psf/black) formatter:
+Format code with the [ruff](https://github.com/astral-sh/ruff) formatter:
 
 ```bash
-black sch
-All done! ✨ 🍰 ✨
+ruff
+8 files left unchanged
 ```

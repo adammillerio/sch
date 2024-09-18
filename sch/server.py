@@ -78,6 +78,7 @@ class CodexServer(Flask):
 
         self.disable_sch_help = False
         self.disable_sch_tree = False
+        self.disable_sch_complete = False
 
         self.session_cookies: Dict[str, bool] = {}
 
@@ -167,6 +168,8 @@ class CodexServer(Flask):
                 return self.sch_tree()
             case "sch_help" | "?":
                 return self.sch_help()
+            case "sch_complete" | "_":
+                return self.sch_complete()
             case "sch_logout" | "&":
                 # Logout request.
                 return self.sch_logout()
@@ -190,16 +193,16 @@ class CodexServer(Flask):
                 logger.error(f"ERR command {spell} not found")
                 return self.sch_fail(f"command {spell} not found", 404)
 
-        # Only bother checking if there's a single argument.
-        if len(command_args) == 1:
-            # Check if this is a scoped builtin command.
-            match command_args[0].lower():
+        # Only bother checking if there are arguments at all.
+        if len(command_args):
+            # Check if this is a scoped builtin command based on the last argument.
+            match command_args[-1].lower():
                 case "sch_tree" | ">":
-                    if not command.disable_tree:
-                        return self.sch_tree(command)
+                    return self.sch_tree(command)
                 case "sch_help" | "?":
-                    if not command.disable_help:
-                        return self.sch_help(command)
+                    return self.sch_help(command)
+                case "sch_complete" | "_":
+                    return self.sch_complete(command)
 
         # Call Command function to get redirect URL
         # github()
@@ -434,7 +437,46 @@ class CodexServer(Flask):
             return self.sch_print(scope.render_tree(self.output_format, tags))
         else:
             # Prod: Ignore sch_tree.
-            logger.error(f"ERR sch_tree disabled, ignoring")
+            logger.error("ERR sch_tree disabled, ignoring")
+            return self.sch_fail("command not found", 404)
+
+    def sch_complete(self, command: Optional[Command] = None) -> Response:
+        """Render the scholar completion list from the root or a command "scope".
+
+        This is initiated by "sch_complete" or "_" as the first argument, either
+        to SCH itself for the full completion list, or to any command for
+        completions under that Command.
+
+        ?s=sch_complete | ?s=_ -> All completions
+        ?s=gh+sch_complete | ?s=gh+_ -> Completions scoped at "gh" command.
+
+        If the scholar server is started with --no-sch-tree, this will instead
+        just return a 404.
+
+        Args:
+            command: Optional[Command]. Optional command to use for scoping the
+                rendered completions.
+
+        Returns:
+            complete_response: Response. Rendered SCH completion response.
+        """
+
+        scope = command if command else self.codex
+
+        if sch_tags := request.args.get("sch_tags", None, type=str):
+            # &sch_tags=public,code = filter scope to only Commands with either
+            # public or code tags.
+            tags = frozenset(sch_tags.split(","))
+        else:
+            # No tag filters provided.
+            tags = None
+
+        if not self.disable_sch_complete:
+            # Debug: Render sch_complete for the given scope.
+            return self.sch_print(scope.render_complete(self.output_format, tags))
+        else:
+            # Ignore sch_complete.
+            logger.error("ERR sch_tree disabled, ignoring")
             return self.sch_fail("command not found", 404)
 
     def sch_help(

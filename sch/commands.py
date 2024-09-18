@@ -17,7 +17,6 @@ from anytree import (
     RenderTree,
     Resolver,
     LevelOrderGroupIter,
-    ChildResolverError,
 )
 from pypandoc import convert_text
 
@@ -447,7 +446,11 @@ class Command(NodeMixin):
     @property
     def full_scope(self) -> str:
         # sch gh search.
-        return f"{self.path[0].name} " + self.scope
+        scope = self.scope
+
+        # Only add space if there is a scope at all, to avoid issues with
+        # splitting on spaces later
+        return f"{self.path[0].name} " + scope if scope else f"{self.path[0].name}"
 
     @property
     def color(self) -> str:
@@ -484,6 +487,26 @@ class Command(NodeMixin):
 
         colored_scope_parts = []
         for i, command in enumerate(self.full_scope.split(" ")):
+            depth_color = COLOR_WHEEL.get(i).value
+            node_color = f"{{.{depth_color}}}"
+            colored_scope_parts.append(f"`{command}`{node_color}")
+
+        return " ".join(colored_scope_parts)
+
+    @property
+    def colored_scope(self) -> str:
+        """Generate a colored scope for sch_complete.
+
+        This is the same as colored_full_scope, but omits the root command name.
+
+        Feturns:
+            colored_scope: str. Colored command scope.
+        """
+
+        colored_scope_parts = []
+
+        # Iterate from first element onwards, starting in the color wheel at 1.
+        for i, command in enumerate(self.full_scope.split(" ")[1:], 1):
             depth_color = COLOR_WHEEL.get(i).value
             node_color = f"{{.{depth_color}}}"
             colored_scope_parts.append(f"`{command}`{node_color}")
@@ -804,6 +827,77 @@ class Command(NodeMixin):
         )
 
     @cache
+    def render_complete(
+        self,
+        output_format: OutputFormat = OutputFormat.TXT,
+        tags: Optional[Iterable[str]] = None,
+    ) -> str:
+        """Render a Command Completion from this Command onward.
+
+        This print "completion" information about this command and all child
+        commands in plain text. Right now this is just the full path to each
+        command, along with any aliases separated by tab.
+
+        The full list of completions will be returned to the user, typically to
+        be used with completion tools like fzf.
+
+        Args:
+            output_format: OutputFormat. Pandoc output format.
+            tags: Optional[Iterable[str]]. Tag(s) to filter tree on prior to
+                rendering completions.
+
+        Returns:
+            rendered_completions: str. Fully rendered plain text list of all
+                completions.
+        """
+
+        render_str = ""
+
+        if tags:
+            # Create a filtered copy of the tree with the provided tags.
+            command = self.filter_tree(tags=tags)
+        else:
+            command = self
+
+        # Sort tree alphabetically descending during render.
+        def alphabetical(items: List[Command]) -> List[Command]:
+            return sorted(items, key=lambda item: item.name)
+
+        for row in RenderTree(command, AsciiStyle, childiter=alphabetical):
+            node = row.node
+
+            # Add a _tab separated_ collection of aliases if present
+            # This is tab separated so that the aliases portion of the
+            # completion line can be filtered out ie via cut -f 1
+            # TODO: Tabs only show in code spans/blocks, so this has to be
+            # manually composed here vs using node.colored_alias_names for now
+            aliases = node.alias_names
+            aliases = f"`\t{aliases}`{self.color_class}" if aliases else ""
+
+            # Just print the full scope of each command
+            # CommonMark: Two spaces before newline -> hard line break
+            render_str += (
+                f"[{node.colored_scope}{aliases}](/sch?s={node.scope_plus})  \n"
+            )
+
+        # Add (command...) as a small scope next to tab title.
+        title = f"sch ({self.name}...)" if self.scope else "sch"
+
+        if output_format != OutputFormat.TXT:
+            # Back button.
+            render_str += "\n[<<](/sch?s=sch_tree)\n"
+
+        return convert_text(
+            SCH_INPUT.format(scope=self.scope)
+            + render_str
+            + SCH_FOOTER.format(sch_title=title),
+            output_format.value,
+            format="md",
+            # Add --preserve-tabs option to retain tab delimiter in completions
+            extra_args=["--from=commonmark_x", "--preserve-tabs"],
+        )
+
+    @cache
     def render_tree(
         self,
         output_format: OutputFormat = OutputFormat.TXT,
@@ -813,6 +907,11 @@ class Command(NodeMixin):
 
         This will render and display an ASCII representation of this Command and
         all of it's subcommands for the user.
+
+        Args:
+            output_format: OutputFormat. Pandoc output format.
+            tags: Optional[Iterable[str]]. Tag(s) to filter tree on prior to
+                rendering tree.
 
         Returns:
             rendered_tree: str. Fully rendered ASCII tree of Command structure.
@@ -872,7 +971,6 @@ class Command(NodeMixin):
             # root.
             command_str = node.scope_plus
 
-            color_node_name = node.colored_name
             # Add a link to invoking this command on the name itself, using the
             # full path.
             md_node_name = (
