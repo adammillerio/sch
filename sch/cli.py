@@ -67,9 +67,9 @@ def sch_run(
 
         if response.status_code == 200:
             # Display command help.
-            click.secho(response.data.decode(), fg="green")
+            click.secho(response.data.decode().strip(), fg="green")
         else:
-            click.secho(response.data.decode(), fg="red")
+            click.secho(response.data.decode().strip(), fg="red")
 
 
 def main() -> None:
