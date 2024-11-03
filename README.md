@@ -10,9 +10,9 @@ a predefined set of commands which "routes" you to the desired page or search
 engine.
 
 For a hands-on explanation and demonstration of Scholar as a tool, a public hosted
-instance is available: https://sch.luphy.net/sch?s=sch_tree
+instance is available: https://aemiller.net/sch?s=sch_tree
 
-As well as a general use doc: https://sch.luphy.net/sch?s=sch_help
+As well as a general use doc: https://aemiller.net/sch?s=sch_help
 
 A major difference is that Scholar is intended to be run locally or via a
 self-hosted public instance. To get an instance of Scholar up and running on
@@ -29,6 +29,16 @@ Guidance for how to run a self-hosted public instance can also be found in the
 
 # Getting Started
 ## TL; DR
+
+The easiest way to install and run Scholar is with [uv](https://https://github.com/astral-sh/uv):
+```bash
+# See uv README for other installation options
+curl -LsSf https://astral.sh/uv/install.sh | sh
+alias sch='uvx --from scholar-search sch'
+```
+
+This will run Scholar in a virtual environment managed by `uv`. Alternatively,
+it can be installed as normal via pip:
 
 ```bash
 # Install scholar with pandoc
@@ -533,28 +543,34 @@ on remote hosts.
 
 # Development
 
-Install in development mode:
+All development on Scholar can be handled through the `uv` tool:
 ```bash
-pip3 install -e '.[dev]'
+uv sync
+Resolved 30 packages in 0.63ms
+Audited 28 packages in 0.08ms
 ```
+
+Invocations of `uv` will read configuration from the [pyproject.toml](pyproject.toml)
+file and configure a virtual environment with `scholar-search` and it's dependencies
+under `.venv` in the repository.
 
 ## Type Checking
 
 Ensure no type errors are present with [pyre](https://github.com/facebook/pyre-check):
 
 ```bash
-pyre check              
+uv run pyre check
 ƛ No type errors found
 ```
 
 **Note**: Pyre daemonizes itself on first run for faster subsequent executions. Be
-sure to shut it down with `pyre kill` when finished.
+sure to shut it down with `uv run pyre kill` when finished.
 
 ## Formatting
 
 Format code with the [ruff](https://github.com/astral-sh/ruff) formatter:
 
 ```bash
-ruff
-8 files left unchanged
+uv run ruff format
+11 files left unchanged
 ```
