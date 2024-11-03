@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 from importlib import import_module
-from typing import Any, Callable, Set, Optional
+from typing import Any, Callable, Optional, Set
 
-from sch.commands import bookmark, command, Command, CommandNotFoundError, search
+from sch.commands import (  # noqa: F401
+    Command,
+    CommandNotFoundError,
+    bookmark,
+    command,
+    search,
+)
 from sch.errors import CodexNotFound
 from sch.server import CodexServer
-from sch.utils import format_doc, query_args, escape_args, load_commands
+from sch.utils import escape_args, format_doc, load_commands, query_args  # noqa: F401
 
 
 class Codex(Command):
@@ -43,7 +49,9 @@ class Codex(Command):
 
         return self._default_command
 
-    def set_default_command(self, command: Command, *args: Any, **kwargs: Any) -> None:
+    def set_default_command(
+        self, default_command: Command, *args: Any, **kwargs: Any
+    ) -> None:
         """Set the default Command.
 
         If a default Command is set, it will be run instead of displaying a 404
@@ -53,10 +61,10 @@ class Codex(Command):
         instead interpreted as the first argument to the default Command.
 
         Args:
-            command: Command. Default Command to set.
+            default_command: Command. Default Command to set.
         """
 
-        self._default_command = command
+        self._default_command = default_command
 
     def default_command(self, *args: Any, **kwargs: Any) -> Callable[..., Command]:
         """Default Command decorator.
@@ -75,10 +83,10 @@ class Codex(Command):
         """
 
         def decorator(func: Callable[..., str]) -> Command:
-            command = Command(command_func=func, name="sch", *args, **kwargs)
-            self._default_command = command
+            default_command = Command(command_func=func, name="sch", *args, **kwargs)
+            self._default_command = default_command
 
-            return command
+            return default_command
 
         return decorator
 
@@ -101,7 +109,7 @@ class Codex(Command):
 
         try:
             # Import the codex and registry.
-            module = import_module(path)
+            import_module(path)
         except (FileNotFoundError, ModuleNotFoundError):
             raise CodexNotFound(name=path)
 
@@ -110,6 +118,7 @@ class Codex(Command):
         tags: Optional[Set[str]] = None,
         exclude_tags: Optional[Set[str]] = None,
         token: Optional[str] = None,
+        external_url: Optional[str] = None,
     ) -> CodexServer:
         """Create a CodexServer from the Codex.
 
@@ -126,6 +135,8 @@ class Codex(Command):
             token: Optional[str]. If provided, this will enable auth and a valid
                 sch_token will need to be provided via the sch_login (!) command
                 in order to use sch.
+            external_url: Optional[str]. If provided, all full URLs to the sch
+                instance will use this URL instead.
 
         Returns:
             codex_server: CodexServer. Flask WSGI app, with enumerated and filtered
@@ -137,6 +148,7 @@ class Codex(Command):
             tags=tags,
             exclude_tags=exclude_tags,
             token=token,
+            external_url=external_url,
             import_name="sch",
         )
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from typing import Optional
 
-from sch import codex, query_args, command, Command, format_doc
+from sch import Command, codex, command, format_doc, query_args
 
 
 @codex.command("gh", tags=["github"])
@@ -40,7 +40,6 @@ def github_search_all(*args: str) -> str:
     return f"https://github.com/search?type=code&q={query_args(*args)}"
 
 
-from sch import codex, command, Command
 
 
 def repo_command(repo: str, docs: str) -> Command:

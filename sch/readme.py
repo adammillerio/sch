@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from functools import cache
 
-from flask import url_for
 from pypandoc import convert_text
 
 from sch.commands import SCH_INPUT
@@ -211,8 +210,7 @@ li {{ color: #93a1a1; }}
 
 
 @cache
-def get_sch_help(output_format: str = "html") -> str:
-    full_url = url_for("sch", _external=True)
+def get_sch_help(full_url: str, output_format: str = "html") -> str:
     return convert_text(
         SCH_INPUT.format(scope="") + SCH_HELP.format(full_url=full_url),
         output_format,

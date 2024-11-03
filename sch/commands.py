@@ -5,20 +5,21 @@ from copy import deepcopy
 from enum import Enum
 from functools import cache
 from inspect import getdoc, signature
-from re import compile as re_compile, Pattern
-from typing import Any, Callable, Dict, Optional, Tuple, List, Set, Iterable
-
-from sch.utils import CyclicalList, format_doc, query_args, escape_args
+from re import Pattern
+from re import compile as re_compile
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from anytree import (
     AbstractStyle,
     AsciiStyle,
+    LevelOrderGroupIter,
     NodeMixin,
     RenderTree,
     Resolver,
-    LevelOrderGroupIter,
 )
 from pypandoc import convert_text
+
+from sch.utils import CyclicalList, escape_args, format_doc, query_args
 
 # sch_help: An input box that is autofocused and filled with the current
 # command scope, which will then submit the entry as another command to sch.
