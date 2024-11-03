@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from sch import codex, command, Command, format_doc, query_args
+from sch import Command, codex, command, format_doc, query_args
 
 
 def google_command(site: str, search_url: str) -> Command:

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-from sch import codex, CodexServer, load_commands, query_args
-
 import example
+from sch import CodexServer, codex, load_commands, query_args
 
 load_commands(example)
 

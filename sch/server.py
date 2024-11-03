@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from logging import Logger, getLogger
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
 from uuid import uuid4
-from typing import Any, cast, Dict, Set, List, Optional, Tuple
 
-from flask import Flask, redirect, request
+if TYPE_CHECKING:
+    from sch import Codex
+
+from flask import Flask, redirect, request, url_for
 from flask.wrappers import Response
 
-from sch.commands import Command, OutputFormat, CommandNotFoundError
+from sch.commands import Command, CommandNotFoundError, OutputFormat
 from sch.readme import get_sch_help
 
 logger: Logger = getLogger(__name__)
@@ -38,12 +41,16 @@ class CodexServer(Flask):
             Commands.
         tags: Optional[Set[str]]. If provided, the codex_cmd will be filtered
             such that only Commands matching these tags are included.
-        token: Optional[str]. If provided, this will enable auth and a valid
-            sch_token will need to be provided via the sch_login (!) command
-            in order to use sch.
         exclude_tags: Optional[Set[str]]. If provided, the Codex will be filtered
             such that Commands with these tags will be excluded in the
             CodexServer.
+        token: Optional[str]. If provided, this will enable auth and a valid
+            sch_token will need to be provided via the sch_login (!) command
+            in order to use sch.
+        external_url: Optional[str]. External URL of Scholar, if it is being hosted
+            behind a reverse proxy. This is used for showing full URLs in things
+            like the main Scholar help page. If not provided, Flask's url_for
+            utility will be used to determine this.
 
     Public Attributes:
         disable_sch_help: bool. If True, all sch_help commands will be silently
@@ -56,10 +63,11 @@ class CodexServer(Flask):
 
     def __init__(
         self,
-        codex_cmd: Command,
+        codex_cmd: "Codex",
         tags: Optional[Set[str]] = None,
         exclude_tags: Optional[Set[str]] = None,
         token: Optional[str] = None,
+        external_url: Optional[str] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -68,10 +76,11 @@ class CodexServer(Flask):
         self.codex = codex_cmd
 
         if tags or exclude_tags:
-            self.codex = self.codex.filter_tree(tags, exclude_tags)
+            self.codex = cast("Codex", self.codex.filter_tree(tags, exclude_tags))
 
         self.enable_sch_token: bool = token is not None
         self.sch_token = token
+        self.external_url = external_url
 
         self.add_url_rule("/sch", view_func=self.sch)
         self.add_url_rule("/", view_func=lambda: redirect("/sch?s=sch_tree", code=302))
@@ -138,21 +147,6 @@ class CodexServer(Flask):
         # ["gh", "adammillerio/sch", "search", "query"]
         # ["gh", "all", "search", "query"]
         args = spell.split(" ")
-
-        if request.args.get("sch_txt", False):
-            # Override to displaying plain text only. This is what the CLI
-            # invocations of sch use and should always be fully compatible
-            # with the HTML version. Fully compatible meaning it should be
-            # formatted mostly the same (via pandoc) with all of the unneeded
-            # pieces like input boxes and links removed. In general pandoc
-            # does a good job of this, but in some cases inferring off the
-            # output format is needed.
-            output_format = OutputFormat.TXT
-            mimetype = "text/plain"
-        else:
-            # By default, display as HTML (markdown rendered via pandoc).
-            output_format = OutputFormat.HTML
-            mimetype = "text/html"
 
         first_arg = args[0].lower()
         if first_arg == "sch_login" or first_arg == "!":
@@ -506,14 +500,21 @@ class CodexServer(Flask):
 
         if not command:
             # Print main sch readme.
-            return self.sch_print(get_sch_help(self.output_format))
+            # Use the external URL if provided, or default to what Flask thinks
+            # it is right now
+            full_url = (
+                f"{self.external_url}/sch"
+                if self.external_url
+                else url_for("sch", _external=True)
+            )
+            return self.sch_print(get_sch_help(full_url, self.output_format))
 
         if not self.disable_sch_help:
             # Debug: Go to sch_help.
             return self.sch_print(command.render_help(self.output_format, error_msg))
         else:
             # Prod: Ignore sch_help.
-            logger.error(f"ERR sch_help disabled, ignoring")
+            logger.error("ERR sch_help disabled, ignoring")
             return self.sch_fail("command not found", 404)
 
     def sch_error(self, command: Command, exc: BaseException) -> Response:

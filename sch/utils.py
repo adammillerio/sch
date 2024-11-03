@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-from itertools import cycle, takewhile, dropwhile
 from importlib.util import module_from_spec
+from itertools import cycle, dropwhile, takewhile
 from pkgutil import iter_modules
 from types import ModuleType
 from typing import (
     Any,
-    cast,
     Callable,
-    Iterable,
     Generic,
-    TypeVar,
+    Iterable,
     List,
     Optional,
+    TypeVar,
     Union,
+    cast,
 )
-from urllib.parse import quote_plus, quote
+from urllib.parse import quote, quote_plus
 
 T = TypeVar("T")
 
@@ -80,9 +80,12 @@ def load_commands(commands_module: ModuleType) -> None:
 
     # Iterate through all submodules of the provided module.
     for importer, module_name, _is_package in iter_modules(commands_module.__path__):
-        spec = importer.find_spec(module_name)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
+        spec = importer.find_spec(module_name, None)
+
+        if spec is not None:
+            module = module_from_spec(spec)
+            if spec.loader is not None:
+                spec.loader.exec_module(module)
 
 
 class CyclicalList(Generic[T]):

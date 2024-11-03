@@ -566,11 +566,18 @@ uv run pyre check
 **Note**: Pyre daemonizes itself on first run for faster subsequent executions. Be
 sure to shut it down with `uv run pyre kill` when finished.
 
-## Formatting
+## Formatting & Linting
 
 Format code with the [ruff](https://github.com/astral-sh/ruff) formatter:
 
 ```bash
 uv run ruff format
 11 files left unchanged
+```
+
+Ruff also handles linting:
+
+```bash
+uv run ruff check
+All checks passed!
 ```
