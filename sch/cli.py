@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-from typing import cast, Optional, Tuple
+from typing import Optional, Tuple, cast
 from urllib.parse import quote_plus
 
 import click
-from flask import request
 from flask.cli import FlaskGroup, ScriptInfo, pass_script_info
 
 from sch.server import CodexServer
@@ -32,6 +31,8 @@ To run the scholar server for browser search, refer to the run subcommand.
     "--tag", type=str, multiple=True, help="filter tags to supply to sch_tags"
 )
 @click.argument("command", nargs=-1)
+# This is caused by a missing type hint in flask itself
+# pyre-ignore[56]: Pyre was not able to infer the type of the decorator `flask.cli.pass_script_info`.
 @pass_script_info
 def sch_run(
     info: ScriptInfo, command: Tuple[str, ...], tag: Optional[Tuple[str, ...]]
@@ -66,7 +67,6 @@ def sch_run(
         response = codex_server.sch()
 
         if response.status_code == 200:
-            # Display command help.
             click.secho(response.data.decode().strip(), fg="green")
         else:
             click.secho(response.data.decode().strip(), fg="red")
