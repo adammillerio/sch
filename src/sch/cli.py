@@ -57,7 +57,7 @@ def sch_run(
 
     codex_server = cast(CodexServer, info.load_app())
 
-    sch_tags = f'&sch_tags={",".join(tag)}' if tag else ""
+    sch_tags = f"&sch_tags={','.join(tag)}" if tag else ""
 
     args_str = quote_plus(" ".join(command))
 
