@@ -30,16 +30,6 @@ Guidance for how to run a self-hosted public instance can also be found in the
 # Getting Started
 ## TL; DR
 
-The easiest way to install and run Scholar is with [uv](https://https://github.com/astral-sh/uv):
-```bash
-# See uv README for other installation options
-curl -LsSf https://astral.sh/uv/install.sh | sh
-alias sch='uvx --from scholar-search sch'
-```
-
-This will run Scholar in a virtual environment managed by `uv`. Alternatively,
-it can be installed as normal via pip:
-
 ```bash
 # Install scholar with pandoc
 pip install scholar-search[pandoc]
@@ -543,41 +533,28 @@ on remote hosts.
 
 # Development
 
-All development on Scholar can be handled through the `uv` tool:
+Install in development mode:
 ```bash
-uv sync
-Resolved 30 packages in 0.63ms
-Audited 28 packages in 0.08ms
+pip3 install -e '.[dev]'
 ```
-
-Invocations of `uv` will read configuration from the [pyproject.toml](pyproject.toml)
-file and configure a virtual environment with `scholar-search` and it's dependencies
-under `.venv` in the repository.
 
 ## Type Checking
 
 Ensure no type errors are present with [pyre](https://github.com/facebook/pyre-check):
 
 ```bash
-uv run pyre check
+pyre check
 ƛ No type errors found
 ```
 
 **Note**: Pyre daemonizes itself on first run for faster subsequent executions. Be
-sure to shut it down with `uv run pyre kill` when finished.
+sure to shut it down with `pyre kill` when finished.
 
-## Formatting & Linting
+## Formatting
 
 Format code with the [ruff](https://github.com/astral-sh/ruff) formatter:
 
 ```bash
-uv run ruff format
-11 files left unchanged
-```
-
-Ruff also handles linting:
-
-```bash
-uv run ruff check
-All checks passed!
+ruff
+8 files left unchanged
 ```

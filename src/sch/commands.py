@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from enum import Enum
-from functools import cache
+from enum import StrEnum
+from functools import cache, cached_property
 from inspect import getdoc, signature
 from re import Pattern
 from re import compile as re_compile
@@ -19,7 +19,7 @@ from anytree import (
 )
 from pypandoc import convert_text
 
-from sch.utils import CyclicalList, escape_args, format_doc, query_args
+from sch.utils import CyclicalList, escape_args, format_doc, full_query, query_args
 
 # sch_help: An input box that is autofocused and filled with the current
 # command scope, which will then submit the entry as another command to sch.
@@ -76,7 +76,7 @@ a {{ color: #cb4b16; text-decoration: none; }}
 """
 
 
-class Color(str, Enum):
+class Color(StrEnum):
     DEFAULT = "default_color"
     YELLOW = "yellow"
     ORANGE = "orange"
@@ -108,7 +108,7 @@ DEPTH_COLORS: List[Color] = [
 COLOR_WHEEL: CyclicalList[Color] = CyclicalList(DEPTH_COLORS)
 
 
-class OutputFormat(str, Enum):
+class OutputFormat(StrEnum):
     """Supported output formats for SCH.
 
     These map to the format argument to pypandoc methods (-f and --format on CLI)
@@ -222,6 +222,53 @@ def bookmark(
         return url
 
     return bookmark_command
+
+
+def tree(
+    short_help: Optional[str] = None,
+    tags: Optional[Iterable[str]] = None,
+    aliases: Optional[Iterable[str]] = None,
+) -> Command:
+    """Tree Command.
+
+    A tree command will display the sch_tree at the point that it is registered.
+
+    All trees have the "tree" Command tag.
+
+    Args:
+        short_help: Optional[str]. Any additional info to be provided in the
+            Command help.
+        tags: Optional[Iterable[str]]. Tag(s) to apply to this Command.
+        aliases: Optional[Iterable[str]]. Alias name(s) to apply to this Command.
+
+    Returns:
+        tree_command: Command.
+    """
+
+    tag_set = {"tree"}
+    if tags:
+        tag_set.update(tags)
+
+    help_str = short_help if short_help else ""
+
+    @command(
+        tags=tag_set,
+        aliases=aliases,
+        disable_tree=False,
+        disable_help=False,
+    )
+    @format_doc(help_str=help_str)
+    def tree_command() -> str:
+        """{help_str}
+
+        This shows the command tree from this command onwards.
+
+        return /sch?s={{command}}+sch_tree
+        """
+
+        return f"/sch?s={full_query()}+sch_tree"
+
+    return tree_command
 
 
 def search(
@@ -340,7 +387,7 @@ class Command(NodeMixin):
     resolver: Resolver = Resolver("name", relax=True)
 
     # Command name regex, used for validation.
-    NAME_REGEX: Pattern[str] = re_compile(r"^[\w-]+$")
+    NAME_REGEX: Pattern[str] = re_compile(r"^[\w\-\.]+$")
 
     def __init__(
         self,
@@ -432,7 +479,7 @@ class Command(NodeMixin):
 
         return f"{{{aliases}}}" if aliases else ""
 
-    @property
+    @cached_property
     def scope(self) -> str:
         # gh search
         # Don't include the root Codex in the scope. See full_scope for the
@@ -614,7 +661,7 @@ class Command(NodeMixin):
         if not cls.NAME_REGEX.fullmatch(name):
             raise ValueError(
                 f"invalid command name '{name}', names can only contain word "
-                "characters ([a-zA-Z0-9_]) or dashes (-)"
+                "characters ([a-zA-Z0-9_]), dots (.), or dashes (-)"
             )
 
     def add_command(
@@ -659,7 +706,7 @@ class Command(NodeMixin):
 
         if self.resolver.get(self, command.name):
             raise ValueError(
-                f"command '{self.full_scope}{command.name}' already exists"
+                f"command '{self.full_scope} {command.name}' already exists"
             )
 
         if tags:
@@ -674,7 +721,7 @@ class Command(NodeMixin):
         for alias in command.aliases:
             if existing_alias := self.child_aliases.get(alias, None):
                 raise ValueError(
-                    f"command alias '{self.full_scope}{alias}' to '{existing_alias}' already exists"
+                    f"command alias '{self.full_scope} {alias}' to '{existing_alias}' already exists"
                 )
 
             self.child_aliases[alias] = name
@@ -785,6 +832,30 @@ class Command(NodeMixin):
 
         return self.add_command(cmd, name)
 
+    def add_tree(
+        self,
+        name: str,
+        short_help: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Command:
+        """Register a Tree Command.
+
+        A tree command will display the sch_tree for the command that it is
+        registered under.
+
+        Args:
+            name: str. Name to register Command under.
+            short_help: Optional[str]. Any additional info to be provided in the
+                Command help.
+
+        Returns:
+            command: Command.
+        """
+
+        cmd = tree(short_help, **kwargs)
+
+        return self.add_command(cmd, name)
+
     @cache
     def render_help(
         self, output_format: OutputFormat = OutputFormat.TXT, error_msg: str = ""
@@ -832,6 +903,7 @@ class Command(NodeMixin):
         self,
         output_format: OutputFormat = OutputFormat.TXT,
         tags: Optional[Iterable[str]] = None,
+        include_aliases: bool = True,
     ) -> str:
         """Render a Command Completion from this Command onward.
 
@@ -873,7 +945,11 @@ class Command(NodeMixin):
             # TODO: Tabs only show in code spans/blocks, so this has to be
             # manually composed here vs using node.colored_alias_names for now
             aliases = node.alias_names
-            aliases = f"`\t{aliases}`{self.color_class}" if aliases else ""
+            aliases = (
+                f"`\t{aliases}`{self.color_class}"
+                if include_aliases and aliases
+                else ""
+            )
 
             # Just print the full scope of each command
             # CommonMark: Two spaces before newline -> hard line break

@@ -235,7 +235,7 @@ class CodexServer(Flask):
             sch_txt: bool. whether or not sch_txt is enabled for this request.
         """
 
-        return request.args.get("sch_txt", False)
+        return bool(request.args.get("sch_txt", False))
 
     @property
     def mimetype(self) -> str:
@@ -284,18 +284,23 @@ class CodexServer(Flask):
             else Response(url, 200, mimetype=self.mimetype)
         )
 
-    def sch_print(self, text: str, code: int = 200) -> Response:
+    def sch_print(
+        self, text: str, code: int = 200, mimetype: Optional[str] = None
+    ) -> Response:
         """Print some non-redirect output as a Response.
 
         Args:
             text: str. Text to output to the user.
             code: int. HTML response code, defaults to 200.
+            mimetype: str. MIME type override.
 
         Returns:
             response: Response. Non-URL redirect text response.
         """
 
-        return Response(text, code, mimetype=self.mimetype)
+        return Response(
+            text, code, mimetype=self.mimetype if not mimetype else mimetype
+        )
 
     def sch_fail(self, msg: str, code: int) -> Response:
         """General "HTTP-level" failure.
@@ -388,11 +393,15 @@ class CodexServer(Flask):
                 success.
         """
 
-        del self.session_cookies[request.cookies.get("sch_session")]
-        logout_response = self.sch_print("ok")
+        if session := request.cookies.get("sch_session"):
+            del self.session_cookies[session]
+            logout_response = self.sch_print("ok")
 
-        # Logout success, delete cookie.
-        logout_response.set_cookie("sch_session", "", expires=0)
+            # Logout success, delete cookie.
+            logout_response.set_cookie("sch_session", "", expires=0)
+        else:
+            logout_response = self.sch_print("no session", 400)
+
         return logout_response
 
     def sch_tree(self, command: Optional[Command] = None) -> Response:
@@ -470,7 +479,7 @@ class CodexServer(Flask):
             return self.sch_print(scope.render_complete(self.output_format, tags))
         else:
             # Ignore sch_complete.
-            logger.error("ERR sch_tree disabled, ignoring")
+            logger.error("ERR sch_complete disabled, ignoring")
             return self.sch_fail("command not found", 404)
 
     def sch_help(
@@ -580,7 +589,7 @@ class CodexServer(Flask):
 
         if not args:
             # No command or args provided at all.
-            return None, tuple()
+            return None, ()
 
         # Create mutable list of all args.
         arg_list = list(args)
@@ -597,7 +606,7 @@ class CodexServer(Flask):
 
         if not arg_list:
             # Root command with no arguments.
-            return command, tuple()
+            return command, ()
 
         while True:
             # Remove the first element in the arg_list.
