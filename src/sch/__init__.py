@@ -8,6 +8,7 @@ from sch.commands import (  # noqa: F401
     bookmark,
     command,
     search,
+    tree,
 )
 from sch.errors import CodexNotFound
 from sch.server import CodexServer

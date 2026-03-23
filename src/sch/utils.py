@@ -16,7 +16,21 @@ from typing import (
 )
 from urllib.parse import quote, quote_plus
 
+from flask import request
+
 T = TypeVar("T")
+
+
+def full_query() -> str:
+    """Get the full query string for the current request.
+
+    smn yt subs -> yt+subs
+
+    Returns:
+        command_query: str. Query string for the current request.
+    """
+
+    return quote_plus(request.args.get("s", ""))
 
 
 def query_args(*args: str) -> str:
